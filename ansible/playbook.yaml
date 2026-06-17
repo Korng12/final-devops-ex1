@@ -3,8 +3,6 @@
   become: yes
   vars:
     app_dir: /app/final-devops-ex1
-    mysql_pod: final-exam-pod
-    mysql_container: mysql
     mysql_database: B-CHANTHA_Mengkong-db
     mysql_user: root
     mysql_password: Hello@123
@@ -71,11 +69,36 @@
       debug:
         var: sqlite_test_output.stdout_lines
 
-    - name: Backup production MySQL database from Kubernetes pod
+    - name: Check mysqldump is installed
+      command: which mysqldump
+      register: mysqldump_check
+      changed_when: false
+      failed_when: false
+
+    - name: Install MySQL client for database backup
+      apt:
+        name: default-mysql-client
+        state: present
+        update_cache: yes
+      when: mysqldump_check.rc != 0
+
+    - name: Backup production MySQL database
       shell: |
-        kubectl exec {{ mysql_pod }} -c {{ mysql_container }} -- \
-          sh -c 'mysqldump -u{{ mysql_user }} -p"{{ mysql_password }}" "{{ mysql_database }}"' \
+        mysqldump \
+          -h127.0.0.1 \
+          -u{{ mysql_user }} \
+          -p"{{ mysql_password }}" \
+          "{{ mysql_database }}" \
           > {{ remote_backup_file }}
+
+    - name: Verify backup.sql was created
+      command: ls -lh "{{ remote_backup_file }}"
+      register: backup_file_info
+      changed_when: false
+
+    - name: Print backup.sql file info
+      debug:
+        var: backup_file_info.stdout
 
     - name: Download backup.sql from web server
       fetch:
