@@ -1,33 +1,84 @@
-
-* hosts: web
+---
+- hosts: web
   become: yes
+  vars:
+    app_dir: /app/final-devops-ex1
+    mysql_pod: final-exam-pod
+    mysql_container: mysql
+    mysql_database: B-CHANTHA_Mengkong-db
+    mysql_user: root
+    mysql_password: Hello@123
+    remote_backup_file: "{{ app_dir }}/backup.sql"
+    local_backup_file: "{{ playbook_dir }}/../backup.sql"
 
   tasks:
 
-  * name: Ensure clean git state
-    shell: |
-    cd /app/id-card-system
-    git reset --hard HEAD
-    git clean -fd
+    - name: Check application directory exists
+      stat:
+        path: "{{ app_dir }}/.git"
+      register: app_git_dir
 
-  * name: Pull latest code
-    shell: |
-    cd /app/id-card-system
-    git pull
+    - name: Stop if application directory is wrong
+      fail:
+        msg: "Repository not found at {{ app_dir }}. Update app_dir in ansible/playbook.yaml to the real path on the web server."
+      when: not app_git_dir.stat.exists
 
-  * name: Build project
-    shell: |
-    cd /app/id-card-system
-    ./gradlew clean build
+    - name: Show current git state before cleanup
+      command: git status --short
+      args:
+        chdir: "{{ app_dir }}"
+      register: git_status_before
+      changed_when: false
 
-  * name: Run SQLite tests
-    shell: |
-    cd /app/id-card-system
-    ./gradlew clean test
+    - name: Print git state before cleanup
+      debug:
+        var: git_status_before.stdout_lines
 
-  * name: Backup MySQL database
-    shell: |
-    kubectl exec final-exam-pod -c mysql -- 
-    sh -c 'mysqldump -h127.0.0.1 -uroot -pHello@123 "B-CHANTHA_Mengkong-db"' \
+    - name: Remove local changes before pulling
+      shell: |
+        git reset --hard HEAD
+        git clean -fd
+      args:
+        chdir: "{{ app_dir }}"
 
-    > backup.sql
+    - name: Pull latest code
+      command: git pull --ff-only
+      args:
+        chdir: "{{ app_dir }}"
+
+    - name: Build project with Gradle
+      shell: |
+        export JAVA_HOME=/opt/java/openjdk
+        export PATH=$JAVA_HOME/bin:$PATH
+        ./gradlew clean assemble
+      args:
+        chdir: "{{ app_dir }}"
+
+    - name: Run tests with SQLite test database
+      shell: |
+        export JAVA_HOME=/opt/java/openjdk
+        export PATH=$JAVA_HOME/bin:$PATH
+        ./gradlew test --tests '*' -Dspring.profiles.active=test
+      args:
+        chdir: "{{ app_dir }}"
+      environment:
+        SPRING_PROFILES_ACTIVE: test
+        SPRING_DATASOURCE_URL: jdbc:sqlite:test.db
+        SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.sqlite.JDBC
+      register: sqlite_test_output
+
+    - name: Print SQLite test output
+      debug:
+        var: sqlite_test_output.stdout_lines
+
+    - name: Backup production MySQL database from Kubernetes pod
+      shell: |
+        kubectl exec {{ mysql_pod }} -c {{ mysql_container }} -- \
+          sh -c 'mysqldump -u{{ mysql_user }} -p"{{ mysql_password }}" "{{ mysql_database }}"' \
+          > {{ remote_backup_file }}
+
+    - name: Download backup.sql from web server
+      fetch:
+        src: "{{ remote_backup_file }}"
+        dest: "{{ local_backup_file }}"
+        flat: yes
