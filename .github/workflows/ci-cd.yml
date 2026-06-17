@@ -1,0 +1,73 @@
+name: CI-CD Pipeline
+
+on:
+push:
+branches:
+- main
+
+jobs:
+
+build-test-deploy:
+
+```
+runs-on: ubuntu-latest
+
+steps:
+
+  - name: Checkout Source
+    uses: actions/checkout@v4
+
+  - name: Setup Java
+    uses: actions/setup-java@v4
+    with:
+      distribution: temurin
+      java-version: '25'
+
+  - name: Grant Gradle Permission
+    run: chmod +x gradlew
+
+  - name: Run SQLite Tests
+    run: ./gradlew clean test
+
+  - name: Build Application
+    run: ./gradlew clean build
+
+  - name: Setup SSH Key
+    if: success()
+    uses: webfactory/ssh-agent@v0.9.0
+    with:
+      ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+  - name: Add Server to Known Hosts
+    if: success()
+    run: |
+      mkdir -p ~/.ssh
+      ssh-keyscan -p 2222 ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+  - name: Run Ansible Playbook
+    if: success()
+    run: |
+      pip install ansible
+      ansible-playbook \
+        -i ansible/inventory.ini \
+        ansible/playbook.yaml
+
+  - name: Send Failure Email
+    if: failure()
+    uses: dawidd6/action-send-mail@v3
+    with:
+      server_address: smtp.gmail.com
+      server_port: 587
+      username: ${{ secrets.EMAIL_USERNAME }}
+      password: ${{ secrets.EMAIL_PASSWORD }}
+      subject: GitHub Actions Build Failed
+      to: srengty@gmail.com
+      from: GitHub Actions
+      body: |
+        Build failed.
+
+        Repository: ${{ github.repository }}
+        Commit: ${{ github.sha }}
+        Author: ${{ github.actor }}
+        Workflow: ${{ github.workflow }}
+
