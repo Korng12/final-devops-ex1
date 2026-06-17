@@ -1,76 +1,44 @@
----
-- hosts: web
-  become: no
+apiVersion: v1
+kind: Pod
 
-  vars:
-    app_dir: /app/final-devops-ex1
+metadata:
+  name: final-exam-pod
+  labels:
+    app: final-exam
 
-  tasks:
+spec:
+  containers:
 
-    - name: Show current git state
-      shell: git status --short
-      args:
-        chdir: "{{ app_dir }}"
+  - name: mysql
+    image: mysql:8
 
-    - name: Pull latest code
-      shell: git pull --ff-only
-      args:
-        chdir: "{{ app_dir }}"
+    env:
+      - name: MYSQL_ROOT_PASSWORD
+        value: "Hello@123"
 
-    - name: Verify Java installation
-      shell: |
-        export JAVA_HOME=/opt/java/openjdk
-        export PATH=$JAVA_HOME/bin:$PATH
-        java -version
-      register: java_output
+      - name: MYSQL_DATABASE
+        value: "B-CHANTHA_Mengkong-db"
 
-    - name: Show Java version
-      debug:
-        var: java_output.stderr_lines
+    ports:
+      - containerPort: 3306
 
-    - name: Build project
-      shell: |
-        export JAVA_HOME=/opt/java/openjdk
-        export PATH=$JAVA_HOME/bin:$PATH
-        ./gradlew clean build
-      args:
-        chdir: "{{ app_dir }}"
-      register: build_output
+  - name: web
+    image: id-card-system:latest
+    imagePullPolicy: Never
 
-    - name: Show build output
-      debug:
-        var: build_output.stdout_lines
+    ports:
+      - containerPort: 8080
+      - containerPort: 22
 
-    - name: Run SQLite tests
-      shell: |
-        export JAVA_HOME=/opt/java/openjdk
-        export PATH=$JAVA_HOME/bin:$PATH
-        ./gradlew test
-      args:
-        chdir: "{{ app_dir }}"
-      environment:
-        SPRING_PROFILES_ACTIVE: test
-        SPRING_DATASOURCE_URL: jdbc:sqlite:test.db
-        SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.sqlite.JDBC
-      register: test_output
+  - name: phpmyadmin
+    image: phpmyadmin/phpmyadmin
 
-    - name: Show test output
-      debug:
-        var: test_output.stdout_lines
+    env:
+      - name: PMA_HOST
+        value: "127.0.0.1"
 
-    - name: Backup MySQL database
-      shell: |
-        mysqldump \
-          -h127.0.0.1 \
-          -uroot \
-          -pHello@123 \
-          B-CHANTHA_Mengkong-db \
-          > /app/backup.sql
+      - name: PMA_PORT
+        value: "3306"
 
-    - name: Verify backup file
-      shell: ls -lh /app/backup.sql
-      register: backup_info
-
-    - name: Show backup file info
-      debug:
-        var: backup_info.stdout
+    ports:
+      - containerPort: 80
