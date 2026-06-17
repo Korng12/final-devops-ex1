@@ -3,13 +3,13 @@ kind: Pod
 
 metadata:
   name: final-exam-pod
+  labels:
+    app: final-exam
 
 spec:
-
   containers:
 
   - name: mysql
-
     image: mysql:8
 
     env:
@@ -23,9 +23,7 @@ spec:
       - containerPort: 3306
 
   - name: web
-
     image: id-card-system:latest
-
     imagePullPolicy: Never
 
     env:
@@ -40,3 +38,4 @@ spec:
 
     ports:
       - containerPort: 8080
+      - containerPort: 22

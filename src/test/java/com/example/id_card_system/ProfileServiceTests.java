@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 import com.example.id_card_system.dto.ProfileRequest;
 import com.example.id_card_system.entity.Profile;
@@ -12,6 +13,7 @@ import com.example.id_card_system.entity.ProfileType;
 import com.example.id_card_system.services.ProfileService;
 
 @SpringBootTest
+@ActiveProfiles("test")
 class ProfileServiceTests {
 
     @Autowired

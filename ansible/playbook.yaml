@@ -1,0 +1,33 @@
+
+* hosts: web
+  become: yes
+
+  tasks:
+
+  * name: Ensure clean git state
+    shell: |
+    cd /app/id-card-system
+    git reset --hard HEAD
+    git clean -fd
+
+  * name: Pull latest code
+    shell: |
+    cd /app/id-card-system
+    git pull
+
+  * name: Build project
+    shell: |
+    cd /app/id-card-system
+    ./gradlew clean build
+
+  * name: Run SQLite tests
+    shell: |
+    cd /app/id-card-system
+    ./gradlew clean test
+
+  * name: Backup MySQL database
+    shell: |
+    kubectl exec final-exam-pod -c mysql -- 
+    sh -c 'mysqldump -h127.0.0.1 -uroot -pHello@123 "B-CHANTHA_Mengkong-db"' \
+
+    > backup.sql
