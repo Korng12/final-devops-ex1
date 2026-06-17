@@ -6,6 +6,8 @@ import java.util.Map;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -93,6 +95,18 @@ public class ProfileController {
     @GetMapping(path = "/{id}/barcode.png", produces = MediaType.IMAGE_PNG_VALUE)
     public byte[] barcode(@PathVariable Long id) {
         return cardRenderingService.barcode(profileService.findById(id));
+    }
+
+    @GetMapping("/{id}/photo")
+    public ResponseEntity<Resource> photo(@PathVariable Long id) throws Exception {
+        Profile profile = profileService.findById(id);
+        if (!profile.hasPhoto()) {
+            return ResponseEntity.notFound().build();
+        }
+        Resource resource = new UrlResource(profileService.photoPath(profile).toUri());
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(profile.getPhotoContentType()))
+                .body(resource);
     }
 
     @GetMapping("/verify/{uuid}")

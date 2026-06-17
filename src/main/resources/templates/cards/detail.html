@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${profile.fullName + ' ID Card'}">ID Card</title>
+    <link rel="stylesheet" th:href="@{/css/card-system.css}">
+</head>
+<body>
+<main class="app-shell">
+    <header class="topbar">
+        <div>
+            <a class="back-link" th:href="@{/cards}">Back to generator</a>
+            <h1 th:text="${profile.fullName}">Generated Card</h1>
+            <p th:text="${profile.registrationNumber}">Registration</p>
+        </div>
+        <div class="top-actions">
+            <a class="button-link" th:href="@{/api/profiles/{id}/pdf(id=${profile.id})}">Download PDF</a>
+            <a class="button-link secondary" th:href="@{/api/profiles/{id}/preview(id=${profile.id})}">HTML Preview</a>
+        </div>
+    </header>
+
+    <section class="detail-grid">
+        <article class="saved-card">
+            <iframe title="Generated card preview" th:srcdoc="${previewHtml}"></iframe>
+        </article>
+
+        <aside class="panel detail-panel">
+            <h2>Card Assets</h2>
+            <div class="asset-block">
+                <span>QR Code</span>
+                <img alt="QR code" th:src="@{/api/profiles/{id}/qr.png(id=${profile.id})}">
+            </div>
+            <div class="asset-block">
+                <span>Barcode</span>
+                <img alt="Barcode" th:src="@{/api/profiles/{id}/barcode.png(id=${profile.id})}">
+            </div>
+            <dl class="detail-list">
+                <div><dt>Type</dt><dd th:text="${profile.type}"></dd></div>
+                <div><dt>Department</dt><dd th:text="${profile.department ?: 'N/A'}"></dd></div>
+                <div><dt>Title</dt><dd th:text="${profile.title ?: 'N/A'}"></dd></div>
+                <div><dt>Email</dt><dd th:text="${profile.email ?: 'N/A'}"></dd></div>
+                <div><dt>Phone</dt><dd th:text="${profile.phone ?: 'N/A'}"></dd></div>
+            </dl>
+            <form th:action="@{/cards/{id}/delete(id=${profile.id})}" method="post">
+                <button class="danger-button" type="submit">Delete Card</button>
+            </form>
+        </aside>
+    </section>
+</main>
+</body>
+</html>

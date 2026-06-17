@@ -1,6 +1,7 @@
 package com.example.id_card_system.services;
 
 import java.util.List;
+import java.nio.file.Path;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -78,6 +79,13 @@ public class ProfileService {
             throw new IllegalArgumentException("One or more profiles were not found");
         }
         return profiles;
+    }
+
+    public Path photoPath(Profile profile) {
+        if (!profile.hasPhoto()) {
+            throw new IllegalArgumentException("Profile has no photo");
+        }
+        return photoStorageService.resolve(profile.getPhotoFileName());
     }
 
     private void applyRequest(Profile profile, ProfileRequest request) {

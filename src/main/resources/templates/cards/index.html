@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ID Card Generator</title>
+    <link rel="stylesheet" th:href="@{/css/card-system.css}">
+</head>
+<body>
+<main class="app-shell">
+    <header class="topbar">
+        <div>
+            <h1>ID Card System</h1>
+            <p>Generate student, employee, and user cards with QR, barcode, and PDF export.</p>
+        </div>
+        <a class="icon-link" th:href="@{/api/templates}">Templates</a>
+    </header>
+
+    <div class="notice success" th:if="${success}" th:text="${success}"></div>
+    <div class="notice error" th:if="${error}" th:text="${error}"></div>
+
+    <section class="generator-grid">
+        <form class="panel form-panel" th:action="@{/cards}" th:object="${profileForm}" method="post" enctype="multipart/form-data">
+            <div class="panel-heading">
+                <h2>Profile Details</h2>
+                <button type="submit">Generate Card</button>
+            </div>
+
+            <div class="field-grid">
+                <label>
+                    <span>Type</span>
+                    <select th:field="*{type}" data-preview="type">
+                        <option th:each="type : ${profileTypes}" th:value="${type}" th:text="${type}"></option>
+                    </select>
+                </label>
+
+                <label>
+                    <span>Template</span>
+                    <select th:field="*{templateId}" data-preview-template>
+                        <option value="">Default</option>
+                        <option th:each="template : ${templates}"
+                                th:value="${template.id}"
+                                th:text="${template.name}"
+                                th:data-primary="${template.primaryColor}"
+                                th:data-secondary="${template.secondaryColor}"
+                                th:data-org="${template.organizationName}"
+                                th:data-tagline="${template.tagline}"></option>
+                    </select>
+                </label>
+
+                <label class="wide">
+                    <span>Full Name</span>
+                    <input th:field="*{fullName}" data-preview="fullName" required maxlength="120" placeholder="Ada Lovelace">
+                </label>
+
+                <label>
+                    <span>Department</span>
+                    <input th:field="*{department}" data-preview="department" maxlength="80" placeholder="Engineering">
+                </label>
+
+                <label>
+                    <span>Title / Class</span>
+                    <input th:field="*{title}" data-preview="title" maxlength="120" placeholder="Computer Science">
+                </label>
+
+                <label>
+                    <span>Email</span>
+                    <input th:field="*{email}" data-preview="email" type="email" maxlength="120" placeholder="ada@example.com">
+                </label>
+
+                <label>
+                    <span>Phone</span>
+                    <input th:field="*{phone}" data-preview="phone" maxlength="40" placeholder="+855 12 345 678">
+                </label>
+
+                <label>
+                    <span>Blood Group</span>
+                    <input th:field="*{bloodGroup}" data-preview="bloodGroup" maxlength="60" placeholder="O+">
+                </label>
+
+                <label>
+                    <span>Date of Birth</span>
+                    <input th:field="*{dateOfBirth}" type="date">
+                </label>
+
+                <label>
+                    <span>Issue Date</span>
+                    <input th:field="*{issueDate}" data-preview="issueDate" type="date">
+                </label>
+
+                <label>
+                    <span>Expiry Date</span>
+                    <input th:field="*{expiryDate}" data-preview="expiryDate" type="date">
+                </label>
+
+                <label>
+                    <span>Barcode</span>
+                    <select th:field="*{barcodeType}" data-preview="barcodeType">
+                        <option th:each="barcodeType : ${barcodeTypes}" th:value="${barcodeType}" th:text="${barcodeType}"></option>
+                    </select>
+                </label>
+
+                <label class="wide upload-field">
+                    <span>Photo</span>
+                    <input name="photo" type="file" accept="image/jpeg,image/png" data-photo-input>
+                </label>
+            </div>
+        </form>
+
+        <aside class="preview-panel">
+            <div class="panel-heading">
+                <h2>Live Preview</h2>
+                <span class="preview-status">Instant</span>
+            </div>
+            <article class="id-card" data-card>
+                <section class="card-header">
+                    <div class="org" data-preview-text="organization">ID Card System</div>
+                    <div class="tagline" data-preview-text="tagline">Official Identity Card</div>
+                </section>
+                <section class="card-body">
+                    <div class="photo-frame">
+                        <img alt="" data-photo-preview hidden>
+                        <span data-initials>AL</span>
+                    </div>
+                    <h3 data-preview-text="fullName">Ada Lovelace</h3>
+                    <p class="role" data-preview-text="title">Computer Science</p>
+
+                    <dl class="card-facts">
+                        <div><dt>Type</dt><dd data-preview-text="type">STUDENT</dd></div>
+                        <div><dt>Department</dt><dd data-preview-text="department">Engineering</dd></div>
+                        <div><dt>Email</dt><dd data-preview-text="email">ada@example.com</dd></div>
+                        <div><dt>Phone</dt><dd data-preview-text="phone">+855 12 345 678</dd></div>
+                        <div><dt>Blood</dt><dd data-preview-text="bloodGroup">O+</dd></div>
+                        <div><dt>Valid Until</dt><dd data-preview-text="expiryDate">Not set</dd></div>
+                    </dl>
+
+                    <div class="code-row">
+                        <div class="qr-box">QR</div>
+                        <div class="barcode-box"><span>||||||||||||</span><small data-preview-text="barcodeType">CODE_128</small></div>
+                    </div>
+                </section>
+            </article>
+        </aside>
+    </section>
+
+    <section class="profiles-section">
+        <div class="section-header">
+            <h2>Generated Cards</h2>
+            <form th:action="@{/cards}" method="get" class="search-row">
+                <select name="type">
+                    <option value="">All types</option>
+                    <option th:each="type : ${profileTypes}" th:value="${type}" th:text="${type}" th:selected="${type == selectedType}"></option>
+                </select>
+                <input name="search" th:value="${search}" placeholder="Search name, reg no, department">
+                <button type="submit">Search</button>
+            </form>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Registration</th>
+                    <th>Type</th>
+                    <th>Department</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${profiles.isEmpty()}">
+                    <td colspan="5" class="empty">No cards generated yet.</td>
+                </tr>
+                <tr th:each="profile : ${profiles}">
+                    <td>
+                        <strong th:text="${profile.fullName}"></strong>
+                        <span th:text="${profile.email ?: 'No email'}"></span>
+                    </td>
+                    <td th:text="${profile.registrationNumber}"></td>
+                    <td th:text="${profile.type}"></td>
+                    <td th:text="${profile.department ?: 'N/A'}"></td>
+                    <td class="actions">
+                        <a th:href="@{/cards/{id}(id=${profile.id})}">View</a>
+                        <a th:href="@{/api/profiles/{id}/pdf(id=${profile.id})}">PDF</a>
+                        <a th:href="@{/api/profiles/{id}/qr.png(id=${profile.id})}">QR</a>
+                        <a th:href="@{/api/profiles/{id}/barcode.png(id=${profile.id})}">Barcode</a>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+<script th:src="@{/js/card-preview.js}"></script>
+</body>
+</html>
