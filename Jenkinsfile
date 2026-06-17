@@ -5,8 +5,13 @@ pipeline {
         pollSCM('H/5 * * * *')
     }
 
-    stages {
+    environment {
+        SPRING_PROFILES_ACTIVE = 'test'
+        SPRING_DATASOURCE_URL = 'jdbc:sqlite:test.db'
+        SPRING_DATASOURCE_DRIVER_CLASS_NAME = 'org.sqlite.JDBC'
+    }
 
+    stages {
         stage('Checkout') {
             steps {
                 git branch: 'main',
@@ -14,54 +19,54 @@ pipeline {
             }
         }
 
-        stage('Test') {
+        stage('Test with SQLite') {
             steps {
                 sh '''
-                chmod +x gradlew
-                ./gradlew clean test
+                    chmod +x gradlew
+                    ./gradlew clean test --tests '*' -Dspring.profiles.active=test
                 '''
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: 'build/test-results/test/*.xml'
+                }
             }
         }
 
         stage('Build') {
             steps {
-                sh '''
-                chmod +x gradlew
-                ./gradlew clean build
-                '''
+                sh './gradlew clean assemble'
             }
         }
 
-        stage('Deploy') {
+        stage('Deploy to Web Server') {
             steps {
-                sh '''
-                ansible-playbook \
-                  -i ansible/inventory.ini \
-                  ansible/playbook.yaml
-                '''
+                sh 'ansible-playbook -i ansible/inventory.ini ansible/playbook.yaml'
             }
         }
     }
 
     post {
         success {
-            echo 'Build, Test and Deployment completed successfully'
+            echo 'Build, test, and deployment completed successfully.'
         }
 
         failure {
             emailext(
-                subject: "Build Failed - ${env.JOB_NAME}",
+                subject: "Jenkins build failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                 body: """
-                Project: ${env.JOB_NAME}
-                Build Number: ${env.BUILD_NUMBER}
+Project: ${env.JOB_NAME}
+Build Number: ${env.BUILD_NUMBER}
+Result: ${currentBuild.currentResult}
 
-                Build or Test failed.
+The build, test, or deploy stage failed.
 
-                Check Jenkins console output:
-                ${env.BUILD_URL}
-                """,
+Console output:
+${env.BUILD_URL}console
+""",
                 recipientProviders: [
-                    [$class: 'DevelopersRecipientProvider']
+                    [$class: 'DevelopersRecipientProvider'],
+                    [$class: 'CulpritsRecipientProvider']
                 ],
                 to: 'srengty@gmail.com'
             )
